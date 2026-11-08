@@ -1,7 +1,7 @@
 const products = [
-  { id: "LK-001", title: "Модель LK-001", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", src: "./public/images/17861036598580539.jpg" },
-  { id: "LK-002", title: "Модель LK-002", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", src: "./public/images/17872721088487035.jpg" },
-  { id: "LK-003", title: "Модель LK-003", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", src: "./public/images/17860733421585008.jpg" },
+  { id: "LK-001", title: "Модель LK-001", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", searchTerms: ["Детская пижама светлого цвета"], src: "./public/images/17861036598580539.jpg" },
+  { id: "LK-002", title: "Модель LK-002", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", searchTerms: ["Детская пижама розового цвета"], src: "./public/images/17872721088487035.jpg" },
+  { id: "LK-003", title: "Модель LK-003", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", searchTerms: ["Детская одежда с цветным принтом"], src: "./public/images/17860733421585008.jpg" },
   { id: "LK-004", title: "Модель LK-004", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", src: "./public/images/17874270624581928.jpg" },
   { id: "LK-005", title: "Модель LK-005", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", src: "./public/images/17870661123599568.jpg" }
 ];
@@ -73,21 +73,39 @@ function renderSelected() {
 }
 
 function renderSelectionBar() {
-  const count = document.querySelector("#selectionCount");
-  if (count) count.textContent = selected.size ? `${selected.size} ${selected.size === 1 ? "модель выбрана" : "модели выбрано"}` : "Модели не выбраны";
+  const toggle = document.querySelector("#shopperToggle");
+  const count = document.querySelector("#shopperCount");
+  const heading = document.querySelector("#shopperHeading");
+  const itemsContainer = document.querySelector("#shopperItems");
+  if (!toggle || !count || !heading || !itemsContainer) return;
+
+  const items = products.filter(product => selected.has(product.id));
+  count.textContent = String(items.length);
+  count.hidden = items.length === 0;
+  toggle.setAttribute("aria-label", items.length ? `Открыть выбранные модели: ${items.length}` : "Открыть шоппер, моделей пока нет");
+  heading.textContent = items.length ? `Выбрано: ${items.length}` : "Пока пусто";
+  itemsContainer.innerHTML = items.length
+    ? items.map(product => `<div class="shopper-item"><img src="${product.src}" alt=""><span><b>${escapeHtml(product.title)}</b><small>${product.id}</small></span><button type="button" data-shopper-remove="${product.id}" aria-label="Убрать ${escapeHtml(product.title)}">×</button></div>`).join("")
+    : '<p class="shopper-empty">Добавьте понравившиеся модели — они появятся здесь.</p><a class="shopper-browse" href="#productGrid">Смотреть каталог <span aria-hidden="true">↓</span></a>';
 }
 
 function renderCatalog() {
   if (!grid) return;
   const query = (document.querySelector("#searchInput")?.value || "").trim().toLowerCase();
-  const category = document.querySelector("#categoryFilter")?.value || "all";
-  const age = document.querySelector("#ageFilter")?.value || "all";
+  const activeSearch = document.querySelector("#activeSearch");
+  const searchTerms = document.querySelector("#activeSearchTerms");
+  const clearSearch = document.querySelector("#clearSearch");
+  const emptyReset = document.querySelector("#emptyReset");
+  if (searchTerms) {
+    if (activeSearch) activeSearch.hidden = !query;
+    searchTerms.textContent = query;
+  }
+  if (clearSearch) clearSearch.hidden = !query;
+  if (emptyReset) emptyReset.hidden = !query;
   const filtered = products.filter(product => {
-    const searchable = `${product.title} ${product.category} ${product.description}`.toLowerCase();
-    const matchesSearch = !query || searchable.includes(query);
-    const matchesCategory = category === "all" || product.category === category;
-    const matchesAge = age === "all";
-    return matchesSearch && matchesCategory && matchesAge;
+    const searchable = `${product.id} ${product.title} ${product.category} ${product.description} ${(product.searchTerms || []).join(" ")}`.toLowerCase();
+    const matchesSearch = !query || query.split(/\s+/).every(term => searchable.includes(term));
+    return matchesSearch;
   });
   grid.innerHTML = filtered.map(productCard).join("");
   document.querySelector("#emptyState").hidden = filtered.length > 0;
@@ -125,16 +143,79 @@ function openProduct(id) {
   dialog.showModal();
 }
 
-document.querySelector("#categoryFilter")?.append(...[...new Set(products.map(product => product.category))].map(category => new Option(category, category)));
 document.querySelector("#searchInput")?.addEventListener("input", renderCatalog);
-document.querySelector("#categoryFilter")?.addEventListener("change", renderCatalog);
-document.querySelector("#ageFilter")?.addEventListener("change", renderCatalog);
+const searchInput = document.querySelector("#searchInput");
+const resetSearch = () => { if (!searchInput) return; searchInput.value = ""; renderCatalog(); searchInput.focus(); };
+document.querySelector("#clearSearch")?.addEventListener("click", resetSearch);
+document.querySelector("#emptyReset")?.addEventListener("click", resetSearch);
 document.querySelector(".dialog-close")?.addEventListener("click", () => dialog.close());
 dialog?.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
 renderCatalog();
 renderFeatured();
 renderSelected();
 renderSelectionBar();
+
+if (document.body.classList.contains("catalog-page") && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const enterTargets = [
+    [document.querySelector(".masthead"), 0],
+    [document.querySelector(".catalog-hero"), 90],
+    [document.querySelector(".catalog-filter-bar"), 180],
+    [document.querySelector(".catalog-meta"), 260],
+    ...[...document.querySelectorAll("#productGrid .product-card")].map((card, index) => [card, 340 + Math.min(index, 6) * 50])
+  ];
+  enterTargets.forEach(([element, delay]) => {
+    if (!element) return;
+    element.style.setProperty("--catalog-enter-delay", `${delay}ms`);
+    element.classList.add("catalog-enter");
+  });
+}
+
+const shopperToggle = document.querySelector("#shopperToggle");
+const shopperPanel = document.querySelector("#shopperPanel");
+const shopperClose = document.querySelector("#shopperClose");
+const closeShopper = (returnFocus = false) => {
+  if (!shopperToggle || !shopperPanel) return;
+  shopperPanel.hidden = true;
+  shopperToggle.setAttribute("aria-expanded", "false");
+  if (returnFocus) shopperToggle.focus();
+};
+shopperToggle?.addEventListener("click", () => {
+  const open = shopperPanel.hidden;
+  shopperPanel.hidden = !open;
+  shopperToggle.setAttribute("aria-expanded", String(open));
+  if (open) shopperClose?.focus();
+});
+shopperClose?.addEventListener("click", () => closeShopper(true));
+shopperPanel?.addEventListener("click", event => {
+  const removeButton = event.target.closest("[data-shopper-remove]");
+  if (removeButton) {
+    selected.delete(removeButton.dataset.shopperRemove);
+    saveSelected();
+    renderCatalog();
+    renderFeatured();
+    renderSelected();
+    renderSelectionBar();
+    return;
+  }
+  if (event.target.closest(".shopper-browse")) closeShopper();
+});
+document.querySelector("#shopperSubmit")?.addEventListener("click", () => closeShopper());
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && shopperPanel && !shopperPanel.hidden) closeShopper(true);
+});
+const catalogMain = document.querySelector(".catalog-page main");
+if (catalogMain) {
+  const positionShopperWithinMain = () => {
+    const bounds = catalogMain.getBoundingClientRect();
+    const baseOffset = window.innerWidth <= 650 ? 16 : 22;
+    const bottomOffset = Math.max(baseOffset, window.innerHeight - bounds.bottom + baseOffset);
+    shopperToggle?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
+    shopperPanel?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
+  };
+  positionShopperWithinMain();
+  window.addEventListener("scroll", positionShopperWithinMain, { passive: true });
+  window.addEventListener("resize", positionShopperWithinMain);
+}
 
 const menuButton = document.querySelector(".menu-toggle");
 const nav = document.querySelector("#nav");
@@ -176,7 +257,7 @@ document.querySelector("#leadForm")?.addEventListener("submit", async event => {
   updateProgress();
   window.addEventListener("scroll", updateProgress, { passive: true });
   window.addEventListener("resize", updateProgress);
-  const revealTargets = document.querySelectorAll(".collection-heading, .product-card, .studio-copy, .studio-image, .wholesale-intro, .lead-form");
+  const revealTargets = document.querySelectorAll(".collection-heading, .home-page .product-card, .studio-copy, .studio-image, .wholesale-intro, .lead-form");
   revealTargets.forEach((element, index) => { element.classList.add("reveal"); if (element.classList.contains("product-card")) element.style.transitionDelay = `${(index % 3) * 90}ms`; });
   if ("IntersectionObserver" in window) {
     const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add("is-visible"); observer.unobserve(entry.target); } }), { threshold: .12, rootMargin: "0px 0px -35px 0px" });
@@ -188,6 +269,35 @@ document.querySelector("#leadForm")?.addEventListener("submit", async event => {
   const syncHeader = () => header?.classList.toggle("is-scrolled", window.scrollY > 24);
   syncHeader();
   window.addEventListener("scroll", syncHeader, { passive: true });
+})();
+(() => {
+  if (!document.body.classList.contains("home-page")) return;
+  const nav = document.querySelector("#nav");
+  const links = [...(nav?.querySelectorAll("a") || [])];
+  const sections = [
+    { link: links.find(link => link.getAttribute("href") === "#top"), element: document.querySelector(".hero-fullscreen") },
+    { link: links.find(link => link.getAttribute("href") === "#studio"), element: document.querySelector("#studio") },
+    { link: links.find(link => link.getAttribute("href") === "#wholesale"), element: document.querySelector("#wholesale") }
+  ].filter(section => section.link && section.element);
+  if (!sections.length) return;
+
+  const setActive = section => links.forEach(link => {
+    if (link === section.link) link.setAttribute("aria-current", "location");
+    else link.removeAttribute("aria-current");
+  });
+  const updateActive = () => {
+    const threshold = (document.querySelector(".masthead")?.offsetHeight || 0) + 80;
+    let active = sections[0];
+    sections.forEach(section => { if (section.element.getBoundingClientRect().top <= threshold) active = section; });
+    setActive(active);
+  };
+  links.forEach(link => link.addEventListener("click", () => {
+    const target = sections.find(section => section.link === link);
+    if (target) setActive(target);
+  }));
+  updateActive();
+  window.addEventListener("scroll", updateActive, { passive: true });
+  window.addEventListener("resize", updateActive);
 })();
 (() => {
   const items = [...document.querySelectorAll(".process-strip-inner span, .trust-strip-inner > div")];
