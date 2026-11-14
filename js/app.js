@@ -1,3 +1,24 @@
+let activePageController;
+const translatedTextNodes = new WeakMap();
+const translatedAttributes = new WeakMap();
+let requestedNavigationHash = null;
+let requestedNavigationDirection = "down";
+let requestedNavigationTimer;
+function holdNavigationTarget(hash) {
+  requestedNavigationHash = hash;
+  clearTimeout(requestedNavigationTimer);
+  if (hash) {
+    const target = document.getElementById(hash.slice(1));
+    const threshold = (document.querySelector(".masthead")?.offsetHeight || 0) + 80;
+    requestedNavigationDirection = target && target.getBoundingClientRect().top <= threshold ? "up" : "down";
+    requestedNavigationTimer = setTimeout(() => { requestedNavigationHash = null; }, 1800);
+  }
+}
+function initializePage() {
+  activePageController?.abort();
+  activePageController = new AbortController();
+  const pageSignal = { signal: activePageController.signal };
+
 const LANGUAGE_STORAGE_KEY = "lumaKidsLanguage";
 const translations = {
   "Главная": ["Bosh sahifa", "Home"], "Каталог": ["Katalog", "Catalog"], "Производство": ["Ishlab chiqarish", "Production"], "Оптовикам": ["Ulgurji xaridorlar uchun", "Wholesale"],
@@ -19,6 +40,7 @@ const translations = {
   "ПРЕДВАРИТЕЛЬНАЯ ПОДБОРКА": ["DASTLABKI TANLOV", "PRELIMINARY SELECTION"], "Фотографии помогают начать разговор о заказе. Наличие, возраст, размеры, материалы и актуальный каталог уточняются у менеджера.": ["Fotosuratlar buyurtma haqida suhbatni boshlashga yordam beradi. Mavjudlik, yosh, o‘lchamlar, materiallar va amaldagi katalogni menejerdan aniqlashtiring.", "Photos help start a conversation about an order. Please confirm availability, age range, sizes, materials, and the current catalog with a manager."], "Поиск": ["Qidiruv", "Search"], "Название или номер модели": ["Model nomi yoki raqami", "Style name or number"], "Выберите одну или несколько моделей": ["Bir yoki bir nechta modelni tanlang", "Select one or more styles"], "По этим параметрам моделей не найдено.": ["Bu mezonlar bo‘yicha model topilmadi.", "No styles match these criteria."], "Сбросить поиск": ["Qidiruvni tozalash", "Clear search"], "Язык сайта": ["Sayt tili", "Site language"],
   "ВАШ ВЫБОР": ["TANLOVINGIZ", "YOUR SELECTION"], "Закрыть шоппер": ["Tanlangan modellarni yopish", "Close selected styles"], "Перейти к заявке": ["So‘rovga o‘tish", "Continue to inquiry"], "Открыть выбранные модели": ["Tanlangan modellarni ochish", "Open selected styles"], "Смотреть каталог": ["Katalogni ko‘rish", "Browse catalog"], "Возраст уточняется": ["Yosh aniqlashtiriladi", "Age to be confirmed"], "Детский трикотаж": ["Bolalar trikotaji", "Children’s knitwear"], "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.": ["Dastlabki tanlovdagi model surati. Yosh, tarkib, o‘lchamlar va mavjudlik aniqlashtiriladi.", "Photo from the preliminary selection. Age, composition, sizes, and availability are to be confirmed."], "Подробнее:": ["Batafsil:", "Details:"], "Выбрано": ["Tanlandi", "Selected"], "Выбрать": ["Tanlash", "Select"], "Убрать": ["Olib tashlash", "Remove"], "ПРЕДВАРИТЕЛЬНЫЕ ДАННЫЕ": ["DASTLABKI MA’LUMOTLAR", "PRELIMINARY DETAILS"], "Возраст": ["Yosh", "Age"], "Размер, сезон, материал": ["O‘lcham, mavsum, material", "Size, season, material"], "Не указаны": ["Ko‘rsatilmagan", "Not specified"], "Убрать из запроса": ["So‘rovdan olib tashlash", "Remove from inquiry"], "Выбрать модель": ["Modelni tanlash", "Select style"], "Текст запроса сформирован, но не отправлен.": ["So‘rov matni tayyorlandi, ammo yuborilmadi.", "Inquiry text prepared but not sent."], "Скопируйте его и передайте менеджеру по официальному контакту компании.": ["Matnni nusxalab, kompaniyaning rasmiy aloqasi orqali menejerga yuboring.", "Copy it and share it with a manager through the company’s official contact."], "Скопировать текст": ["Matnni nusxalash", "Copy text"], "Скопировано": ["Nusxalandi", "Copied"], "Запрос на модели — Luma Kids": ["Modellar bo‘yicha so‘rov — Luma Kids", "Style inquiry — Luma Kids"], "Имя:": ["Ism:", "Name:"], "Контакт:": ["Aloqa:", "Contact:"], "Модели:": ["Modellar:", "Styles:"], "не выбраны": ["tanlanmagan", "none selected"], "Комментарий:": ["Izoh:", "Comment:"], "не указан": ["ko‘rsatilmagan", "not provided"], "Пока пусто": ["Hozircha bo‘sh", "Your selection is empty"], "Добавьте понравившиеся модели — они появятся здесь.": ["Yoqtirgan modellaringizni qo‘shing — ular shu yerda ko‘rinadi.", "Add styles you like and they’ll appear here."], "Номер модели": ["Model raqami", "Style number"],
   "Категория": ["Turkum", "Category"], "Модели": ["Modellar", "Styles"], "Поиск моделей": ["Modellarni qidirish", "Search styles"], "Выбранные модели": ["Tanlangan modellar", "Selected styles"], "Открыть шоппер, моделей пока нет": ["Tanlangan modellarni ochish, hozircha model yo‘q", "Open selection, no styles yet"], "Закрыть": ["Yopish", "Close"], "02 / ПРОИЗВОДСТВО": ["02 / ISHLAB CHIQARISH", "02 / PRODUCTION"], "Запросить условия ↗": ["Shartlarni so‘rash ↗", "Request terms ↗"],
+  "моделей.": ["modellari.", "styles."],
   "Модель": ["Model", "Style"], "Модель LK-001": ["Model LK-001", "Style LK-001"], "Модель LK-002": ["Model LK-002", "Style LK-002"], "Модель LK-003": ["Model LK-003", "Style LK-003"], "Модель LK-004": ["Model LK-004", "Style LK-004"], "Модель LK-005": ["Model LK-005", "Style LK-005"], "Пример детской одежды": ["Bolalar kiyimidan namuna", "Example of children's clothing"], "CHILDREN’S KNITWEAR": ["BOLALAR TRIKOTAJI", "CHILDREN’S KNITWEAR"], "Открыть меню": ["Menyuni ochish", "Open menu"],
   "Luma Kids — производство детского трикотажа": ["Luma Kids — bolalar trikotaji ishlab chiqarish", "Luma Kids — children’s knitwear manufacturing"], "Модели и запрос каталога — Luma Kids": ["Modellar va katalog so‘rovi — Luma Kids", "Styles and catalog inquiry — Luma Kids"], "Luma Kids — производство детской трикотажной одежды для оптовых партнёров. Индивидуальные модели и цвета, каталог и запрос на сотрудничество.": ["Luma Kids — ulgurji hamkorlar uchun bolalar trikotaj kiyimlari ishlab chiqarish. Individual modellar va ranglar, katalog va hamkorlik so‘rovi.", "Luma Kids manufactures children’s knitwear for wholesale partners. Custom styles and colors, catalog, and partnership inquiries."], "Предварительная подборка моделей Luma Kids. Запросите каталог, размеры, наличие и условия оптового производства.": ["Luma Kids modellarining dastlabki tanlovi. Katalog, o‘lchamlar, mavjudlik va ulgurji ishlab chiqarish shartlarini so‘rang.", "A preliminary selection of Luma Kids styles. Ask about the catalog, sizes, availability, and wholesale production terms."]
 };
@@ -26,8 +48,6 @@ let currentLanguage = ["uz", "en"].includes(localStorage.getItem(LANGUAGE_STORAG
 const t = (text, language = currentLanguage) => language === "ru" ? text : translations[text]?.[language === "uz" ? 0 : 1] || text;
 const localizedVariants = text => [text, ...(translations[text] || [])];
 const countModels = count => currentLanguage === "uz" ? `${count} ta model` : currentLanguage === "en" ? `${count} ${count === 1 ? "model" : "models"}` : `${count} ${count === 1 ? "модель" : "моделей"}`;
-const translatedTextNodes = new WeakMap();
-const translatedAttributes = new WeakMap();
 function applyPageLanguage() {
   document.documentElement.lang = currentLanguage === "uz" ? "uz-Latn" : currentLanguage;
   const title = document.querySelector("title");
@@ -60,13 +80,27 @@ function applyPageLanguage() {
     });
   });
   document.querySelectorAll("[data-language]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.language === currentLanguage)));
+  syncLanguageIndicators();
+}
+function syncLanguageIndicators() {
+  document.querySelectorAll(".language-switch").forEach(group => {
+    const selected = group.querySelector(`[data-language="${currentLanguage}"]`);
+    if (!selected) return;
+    const groupBounds = group.getBoundingClientRect();
+    const buttonBounds = selected.getBoundingClientRect();
+    group.style.setProperty("--language-indicator-x", `${buttonBounds.left - groupBounds.left}px`);
+    group.style.setProperty("--language-indicator-y", `${buttonBounds.top - groupBounds.top}px`);
+    group.style.setProperty("--language-indicator-width", `${buttonBounds.width}px`);
+    group.style.setProperty("--language-indicator-height", `${buttonBounds.height}px`);
+  });
 }
 document.querySelectorAll("[data-language]").forEach(button => button.addEventListener("click", () => {
+  if (button.dataset.language === currentLanguage) return;
   currentLanguage = button.dataset.language;
   localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage);
   applyPageLanguage();
   document.dispatchEvent(new Event("luma-language-change"));
-}));
+}, pageSignal));
 
 const products = [
   { id: "LK-001", title: "Модель LK-001", category: "Детский трикотаж", description: "Фото модели из предварительной подборки. Возраст, состав, размеры и наличие уточняются.", searchTerms: ["Детская пижама светлого цвета"], src: "./public/images/17861036598580539.jpg" },
@@ -104,12 +138,12 @@ if (heroVideo) {
       if (!heroVideo.paused) heroVideo.classList.add("is-playing");
     }).catch(() => heroVideo.classList.remove("is-playing"));
   };
-  heroVideo.addEventListener("playing", () => heroVideo.classList.add("is-playing"));
-  heroVideo.addEventListener("pause", () => heroVideo.classList.remove("is-playing"));
-  heroVideo.addEventListener("error", () => heroVideo.classList.remove("is-playing"));
+  heroVideo.addEventListener("playing", () => heroVideo.classList.add("is-playing"), pageSignal);
+  heroVideo.addEventListener("pause", () => heroVideo.classList.remove("is-playing"), pageSignal);
+  heroVideo.addEventListener("error", () => heroVideo.classList.remove("is-playing"), pageSignal);
   syncHeroVideo();
-  reducedMotion.addEventListener?.("change", syncHeroVideo);
-  smallScreen.addEventListener?.("change", syncHeroVideo);
+  reducedMotion.addEventListener?.("change", syncHeroVideo, pageSignal);
+  smallScreen.addEventListener?.("change", syncHeroVideo, pageSignal);
 }
 
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -140,7 +174,7 @@ function renderSelected() {
     renderFeatured();
     renderSelected();
     renderSelectionBar();
-  }));
+  }, pageSignal));
 }
 
 function renderSelectionBar() {
@@ -189,8 +223,8 @@ function renderCatalog() {
     renderCatalog();
     renderSelected();
     renderSelectionBar();
-  }));
-  grid.querySelectorAll(".product-open").forEach(button => button.addEventListener("click", () => openProduct(button.closest("[data-id]").dataset.id)));
+  }, pageSignal));
+  grid.querySelectorAll(".product-open").forEach(button => button.addEventListener("click", () => openProduct(button.closest("[data-id]").dataset.id), pageSignal));
 }
 
 function renderFeatured() {
@@ -213,17 +247,17 @@ function openProduct(id) {
     renderFeatured();
     renderSelected();
     renderSelectionBar();
-  });
+  }, pageSignal);
   dialog.showModal();
 }
 
-document.querySelector("#searchInput")?.addEventListener("input", renderCatalog);
+document.querySelector("#searchInput")?.addEventListener("input", renderCatalog, pageSignal);
 const searchInput = document.querySelector("#searchInput");
 const resetSearch = () => { if (!searchInput) return; searchInput.value = ""; renderCatalog(); searchInput.focus(); };
-document.querySelector("#clearSearch")?.addEventListener("click", resetSearch);
-document.querySelector("#emptyReset")?.addEventListener("click", resetSearch);
-document.querySelector(".dialog-close")?.addEventListener("click", () => dialog.close());
-dialog?.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
+document.querySelector("#clearSearch")?.addEventListener("click", resetSearch, pageSignal);
+document.querySelector("#emptyReset")?.addEventListener("click", resetSearch, pageSignal);
+document.querySelector(".dialog-close")?.addEventListener("click", () => dialog.close(), pageSignal);
+dialog?.addEventListener("click", event => { if (event.target === dialog) dialog.close(); }, pageSignal);
 renderCatalog();
 renderFeatured();
 renderSelected();
@@ -236,7 +270,7 @@ document.addEventListener("luma-language-change", () => {
   renderSelectionBar();
   if (dialog?.open && activeDialogId) openProduct(activeDialogId);
   if (result && !result.hidden && lastFormRequest) renderFormResult(buildRequestText(lastFormRequest));
-});
+}, pageSignal);
 
 if (document.body.classList.contains("catalog-page") && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const enterTargets = [
@@ -267,8 +301,8 @@ shopperToggle?.addEventListener("click", () => {
   shopperPanel.hidden = !open;
   shopperToggle.setAttribute("aria-expanded", String(open));
   if (open) shopperClose?.focus();
-});
-shopperClose?.addEventListener("click", () => closeShopper(true));
+}, pageSignal);
+shopperClose?.addEventListener("click", () => closeShopper(true), pageSignal);
 shopperPanel?.addEventListener("click", event => {
   const removeButton = event.target.closest("[data-shopper-remove]");
   if (removeButton) {
@@ -281,11 +315,11 @@ shopperPanel?.addEventListener("click", event => {
     return;
   }
   if (event.target.closest(".shopper-browse")) closeShopper();
-});
-document.querySelector("#shopperSubmit")?.addEventListener("click", () => closeShopper());
+}, pageSignal);
+document.querySelector("#shopperSubmit")?.addEventListener("click", () => closeShopper(), pageSignal);
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && shopperPanel && !shopperPanel.hidden) closeShopper(true);
-});
+}, pageSignal);
 const catalogMain = document.querySelector(".catalog-page main");
 if (catalogMain) {
   const positionShopperWithinMain = () => {
@@ -296,21 +330,39 @@ if (catalogMain) {
     shopperPanel?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
   };
   positionShopperWithinMain();
-  window.addEventListener("scroll", positionShopperWithinMain, { passive: true });
-  window.addEventListener("resize", positionShopperWithinMain);
+  window.addEventListener("scroll", positionShopperWithinMain, { passive: true, signal: activePageController.signal });
+  window.addEventListener("resize", positionShopperWithinMain, pageSignal);
 }
 
 const menuButton = document.querySelector(".menu-toggle");
 const nav = document.querySelector("#nav");
+window.addEventListener("resize", syncLanguageIndicators, { passive: true, signal: activePageController.signal });
+let navIndicator = nav?.querySelector(".nav-indicator");
+if (nav && !navIndicator) {
+  navIndicator = document.createElement("span");
+  navIndicator.className = "nav-indicator";
+  navIndicator.setAttribute("aria-hidden", "true");
+  nav.append(navIndicator);
+}
+const moveNavIndicator = (link = nav?.querySelector("a[aria-current]")) => {
+  if (!nav || !navIndicator || !link || window.matchMedia("(max-width: 650px)").matches) return;
+  const navBounds = nav.getBoundingClientRect();
+  const linkBounds = link.getBoundingClientRect();
+  navIndicator.style.width = `${linkBounds.width}px`;
+  navIndicator.style.transform = `translate(${linkBounds.left - navBounds.left}px, ${linkBounds.bottom - navBounds.top + 3}px)`;
+};
+moveNavIndicator();
 menuButton?.addEventListener("click", () => {
   const open = nav.classList.toggle("open");
   menuButton.setAttribute("aria-expanded", String(open));
-});
+  requestAnimationFrame(syncLanguageIndicators);
+}, pageSignal);
 nav?.querySelectorAll("a").forEach(link => link.addEventListener("click", () => {
   nav.classList.remove("open");
   menuButton?.setAttribute("aria-expanded", "false");
-}));
-document.querySelector("#year").textContent = new Date().getFullYear();
+}, pageSignal));
+const year = document.querySelector("#year");
+if (year) year.textContent = new Date().getFullYear();
 
 let lastFormRequest = null;
 function buildRequestText(data) {
@@ -328,7 +380,7 @@ function renderFormResult(message) {
   result.querySelector(".copy-request").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(message); } catch { const area = document.createElement("textarea"); area.value = message; result.append(area); area.select(); document.execCommand("copy"); area.remove(); }
     result.querySelector(".copy-request").textContent = t("Скопировано");
-  });
+  }, pageSignal);
 }
 document.querySelector("#leadForm")?.addEventListener("submit", async event => {
   event.preventDefault();
@@ -340,14 +392,14 @@ document.querySelector("#leadForm")?.addEventListener("submit", async event => {
   result.hidden = false;
   renderFormResult(message);
   result.scrollIntoView({ behavior: "smooth", block: "nearest" });
-});
+}, pageSignal);
 
 (() => {
   const progress = document.querySelector(".scroll-progress");
   const updateProgress = () => { const max = document.documentElement.scrollHeight - window.innerHeight; if (progress) progress.style.width = `${max > 0 ? (window.scrollY / max) * 100 : 0}%`; };
   updateProgress();
-  window.addEventListener("scroll", updateProgress, { passive: true });
-  window.addEventListener("resize", updateProgress);
+  window.addEventListener("scroll", updateProgress, { passive: true, signal: activePageController.signal });
+  window.addEventListener("resize", updateProgress, pageSignal);
   const revealTargets = document.querySelectorAll(".collection-heading, .home-page .product-card, .studio-copy, .studio-image, .wholesale-intro, .lead-form");
   revealTargets.forEach((element, index) => { element.classList.add("reveal"); if (element.classList.contains("product-card")) element.style.transitionDelay = `${(index % 3) * 90}ms`; });
   if ("IntersectionObserver" in window) {
@@ -357,10 +409,14 @@ document.querySelector("#leadForm")?.addEventListener("submit", async event => {
 })();
 (() => {
   const header = document.querySelector(".masthead");
-  const syncHeader = () => header?.classList.toggle("is-scrolled", window.scrollY > 24);
+  const syncHeader = () => {
+    header?.classList.toggle("is-scrolled", window.scrollY > 24);
+    document.dispatchEvent(new Event("luma-header-state-change"));
+  };
   syncHeader();
-  window.addEventListener("scroll", syncHeader, { passive: true });
+  window.addEventListener("scroll", syncHeader, { passive: true, signal: activePageController.signal });
 })();
+document.addEventListener("luma-header-state-change", () => requestAnimationFrame(() => moveNavIndicator()), pageSignal);
 (() => {
   if (!document.body.classList.contains("home-page")) return;
   const nav = document.querySelector("#nav");
@@ -372,23 +428,41 @@ document.querySelector("#leadForm")?.addEventListener("submit", async event => {
   ].filter(section => section.link && section.element);
   if (!sections.length) return;
 
-  const setActive = section => links.forEach(link => {
-    if (link === section.link) link.setAttribute("aria-current", "location");
-    else link.removeAttribute("aria-current");
-  });
+  const setActive = section => {
+    links.forEach(link => {
+      if (link === section.link) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    });
+    moveNavIndicator(section.link);
+  };
   const updateActive = () => {
     const threshold = (document.querySelector(".masthead")?.offsetHeight || 0) + 80;
+    if (requestedNavigationHash) {
+      const requested = sections.find(section => section.link.getAttribute("href") === requestedNavigationHash);
+      const requestedTop = requested?.element.getBoundingClientRect().top;
+      const targetReached = requestedNavigationHash === "#top"
+        ? window.scrollY <= 2
+        : requestedNavigationDirection === "down" ? requestedTop <= threshold : requestedTop >= threshold;
+      if (requested && !targetReached) {
+        setActive(requested);
+        return;
+      }
+      holdNavigationTarget(null);
+    }
     let active = sections[0];
     sections.forEach(section => { if (section.element.getBoundingClientRect().top <= threshold) active = section; });
     setActive(active);
   };
   links.forEach(link => link.addEventListener("click", () => {
     const target = sections.find(section => section.link === link);
-    if (target) setActive(target);
-  }));
+    if (target) {
+      holdNavigationTarget(target.link.getAttribute("href"));
+      setActive(target);
+    }
+  }, pageSignal));
   updateActive();
-  window.addEventListener("scroll", updateActive, { passive: true });
-  window.addEventListener("resize", updateActive);
+  window.addEventListener("scroll", updateActive, { passive: true, signal: activePageController.signal });
+  window.addEventListener("resize", updateActive, pageSignal);
 })();
 (() => {
   const items = [...document.querySelectorAll(".process-strip-inner span, .trust-strip-inner > div")];
@@ -405,3 +479,123 @@ document.querySelector("#leadForm")?.addEventListener("submit", async event => {
   }), { threshold: .15, rootMargin: "0px 0px -24px 0px" });
   items.forEach(item => observer.observe(item));
 })();
+}
+
+initializePage();
+
+const routeCache = new Map();
+let navigationRequest = 0;
+const routeName = url => /(?:^|\/)catalog(?:\.html)?\/?$/.test(url.pathname) ? "catalog" : "home";
+let currentRoute = document.body.classList.contains("catalog-page") ? "catalog" : "home";
+let scrollSaveTimer;
+window.addEventListener("scroll", () => {
+  clearTimeout(scrollSaveTimer);
+  scrollSaveTimer = setTimeout(() => history.replaceState({ ...history.state, scrollY: window.scrollY }, "", window.location.href), 120);
+}, { passive: true });
+const fetchPage = url => {
+  const key = `${url.pathname}${url.search}`;
+  if (!routeCache.has(key)) routeCache.set(key, fetch(key).then(response => {
+    if (!response.ok) throw new Error(`Could not load ${key}`);
+    return response.text();
+  }).then(markup => new DOMParser().parseFromString(markup, "text/html")).catch(error => {
+    routeCache.delete(key);
+    throw error;
+  }));
+  return routeCache.get(key);
+};
+
+async function navigateTo(url, addHistory = true, restoreScroll = 0) {
+  const requestId = ++navigationRequest;
+  try {
+    const nextPage = await fetchPage(url);
+    if (requestId !== navigationRequest) return;
+    const nextMain = nextPage.querySelector("main")?.cloneNode(true);
+    const currentMain = document.querySelector("main");
+    if (!nextMain || !currentMain) throw new Error("Page content is missing");
+
+    const updatePage = () => {
+      if (requestId !== navigationRequest) return;
+      const currentHeader = document.querySelector(".masthead");
+      const nextHeader = nextPage.querySelector(".masthead");
+      const currentLinks = [...(currentHeader?.querySelectorAll(".nav > a") || [])];
+      const nextLinks = [...(nextHeader?.querySelectorAll(".nav > a") || [])];
+      currentLinks.forEach((link, index) => {
+        const nextLink = nextLinks[index];
+        if (!nextLink) return;
+        link.href = nextLink.getAttribute("href");
+        const currentState = nextLink.getAttribute("aria-current");
+        currentState ? link.setAttribute("aria-current", currentState) : link.removeAttribute("aria-current");
+      });
+      const nextCta = nextHeader?.querySelector(".header-cta");
+      const currentCta = currentHeader?.querySelector(".header-cta");
+      if (nextCta && currentCta) currentCta.href = nextCta.getAttribute("href");
+
+      document.body.className = nextPage.body.className;
+      currentRoute = routeName(url);
+      currentMain.replaceWith(nextMain);
+      const currentFooter = document.querySelector(".footer");
+      const nextFooter = nextPage.querySelector(".footer")?.cloneNode(true);
+      if (currentFooter && nextFooter) currentFooter.replaceWith(nextFooter);
+      const nextDescription = nextPage.querySelector('meta[name="description"]');
+      const currentDescription = document.querySelector('meta[name="description"]');
+      if (nextDescription && currentDescription) {
+        currentDescription.dataset.ruContent = nextDescription.content;
+        currentDescription.content = nextDescription.content;
+      }
+      const currentTitle = document.querySelector("title");
+      if (currentTitle) {
+        currentTitle.dataset.ruText = nextPage.title;
+        currentTitle.textContent = nextPage.title;
+      }
+      if (addHistory) {
+        history.replaceState({ ...history.state, scrollY: window.scrollY }, "", window.location.href);
+        history.pushState({ scrollY: 0 }, "", url.href);
+      }
+      nextMain.classList.add("route-enter");
+      window.scrollTo(0, restoreScroll);
+      holdNavigationTarget(["#studio", "#wholesale"].includes(url.hash) ? url.hash : null);
+      initializePage();
+      document.dispatchEvent(new Event("luma-header-state-change"));
+      if (url.hash) requestAnimationFrame(() => document.querySelector(decodeURIComponent(url.hash))?.scrollIntoView({ behavior: "smooth" }));
+    };
+
+    if (document.startViewTransition) document.startViewTransition(updatePage);
+    else updatePage();
+  } catch {
+    if (requestId === navigationRequest) window.location.assign(url.href);
+  }
+}
+
+document.addEventListener("click", event => {
+  const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+  if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target || link.hasAttribute("download")) return;
+  const isHomeNavLink = link.matches(".nav > a:first-child");
+  const url = new URL(link.href, window.location.href);
+  if (isHomeNavLink) {
+    url.pathname = new URL("./index.html", window.location.href).pathname;
+    url.search = "";
+    url.hash = "";
+  }
+  const file = url.pathname.split("/").pop();
+  const sameRouteHomeReset = isHomeNavLink && routeName(url) === currentRoute && (window.location.hash || window.location.pathname !== url.pathname);
+  if (url.origin !== window.location.origin || !["", "index", "index.html", "catalog", "catalog.html"].includes(file) || (routeName(url) === currentRoute && !sameRouteHomeReset)) return;
+  event.preventDefault();
+  document.querySelector(".nav")?.classList.remove("open");
+  document.querySelector(".menu-toggle")?.setAttribute("aria-expanded", "false");
+  navigateTo(url);
+});
+
+document.addEventListener("pointerover", event => {
+  const link = event.target instanceof Element ? event.target.closest('a[href$="catalog.html"]') : null;
+  if (link) fetchPage(new URL(link.href, window.location.href)).catch(() => {});
+}, { passive: true });
+window.addEventListener("popstate", event => {
+  const url = new URL(window.location.href);
+  const scrollY = event.state?.scrollY || 0;
+  if (routeName(url) === currentRoute) {
+    if (url.hash) requestAnimationFrame(() => document.querySelector(decodeURIComponent(url.hash))?.scrollIntoView({ behavior: "smooth" }));
+    else window.scrollTo(0, scrollY);
+    return;
+  }
+  navigateTo(url, false, scrollY);
+});
