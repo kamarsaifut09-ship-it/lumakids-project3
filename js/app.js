@@ -326,7 +326,7 @@ if (catalogMain) {
   const positionShopperWithinMain = () => {
     cancelAnimationFrame(shopperPositionFrame);
     shopperPositionFrame = requestAnimationFrame(() => {
-      const baseOffset = window.innerWidth <= 650 ? 16 : 22;
+      const baseOffset = 82;
       const bottomOffset = Math.max(baseOffset, window.innerHeight - catalogMain.getBoundingClientRect().bottom + baseOffset);
       shopperToggle?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
       shopperPanel?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
