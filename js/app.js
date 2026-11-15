@@ -321,13 +321,16 @@ document.addEventListener("keydown", event => {
   if (event.key === "Escape" && shopperPanel && !shopperPanel.hidden) closeShopper(true);
 }, pageSignal);
 const catalogMain = document.querySelector(".catalog-page main");
+let shopperPositionFrame = 0;
 if (catalogMain) {
   const positionShopperWithinMain = () => {
-    const bounds = catalogMain.getBoundingClientRect();
-    const baseOffset = window.innerWidth <= 650 ? 16 : 22;
-    const bottomOffset = Math.max(baseOffset, window.innerHeight - bounds.bottom + baseOffset);
-    shopperToggle?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
-    shopperPanel?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
+    cancelAnimationFrame(shopperPositionFrame);
+    shopperPositionFrame = requestAnimationFrame(() => {
+      const baseOffset = window.innerWidth <= 650 ? 16 : 22;
+      const bottomOffset = Math.max(baseOffset, window.innerHeight - catalogMain.getBoundingClientRect().bottom + baseOffset);
+      shopperToggle?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
+      shopperPanel?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
+    });
   };
   positionShopperWithinMain();
   window.addEventListener("scroll", positionShopperWithinMain, { passive: true, signal: activePageController.signal });
