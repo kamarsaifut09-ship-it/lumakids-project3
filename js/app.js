@@ -326,8 +326,9 @@ if (catalogMain) {
   const positionShopperWithinMain = () => {
     cancelAnimationFrame(shopperPositionFrame);
     shopperPositionFrame = requestAnimationFrame(() => {
-      const baseOffset = 82;
-      const bottomOffset = Math.max(baseOffset, window.innerHeight - catalogMain.getBoundingClientRect().bottom + baseOffset);
+      const baseOffset = window.innerWidth <= 650 ? 16 : 22;
+      const safeAreaBottom = Number.parseFloat(getComputedStyle(shopperToggle).getPropertyValue("--shopper-safe-bottom")) || 0;
+      const bottomOffset = Math.max(baseOffset, window.innerHeight - catalogMain.getBoundingClientRect().bottom + baseOffset - safeAreaBottom);
       shopperToggle?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
       shopperPanel?.style.setProperty("--shopper-main-bottom", `${bottomOffset}px`);
     });
